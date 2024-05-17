@@ -1,7 +1,7 @@
 extern crate nalgebra as na; // Linear algebra
 extern crate num; // Complex numbers
 
-use nalgebra::DMatrix; 
+use nalgebra::DMatrix;
 use num::Complex;
 use std::f64::consts::PI;
 
@@ -15,8 +15,16 @@ fn main() {
     println!("Plain data: {:?}", data);
 
     let encoded = sigma_inverse(&data);
+    
+    println!("Encoded data:");
+    for encoded_data in encoded.iter() {
+        println!("{:?}", encoded_data);
+    }
 
-    println!("Encoded: {:?}", encoded);
+    let decoded = sigma(&encoded);
+    for decoded_data in decoded.iter() {
+        println!("{:?}", decoded_data);
+    }
 }
 
 fn vandermonde() -> Vec<Vec<Complex<f64>>> {
@@ -45,6 +53,23 @@ fn sigma_inverse(data: &Vec<f64>) -> DMatrix<Complex<f64>> {
     b
 }
 
-fn sigma(encoded: &DMatrix<Complex<f64>>) -> () {
-    // TODO
+fn sigma(encoded: &DMatrix<Complex<f64>>) -> Vec<Complex<f64>> {
+    
+    let N: usize = M/2;
+    let xi: Complex<f64> = 2 as f64 * PI * (Complex::new(1.0, 1.0) / M as f64);
+    let mut decoded_data = Vec::new();
+    for n in 0..N {
+        let root = xi.powf(2 as f64 * n as f64 + 1 as f64);
+        decoded_data.push(polynomial_eval(&encoded, &root));
+    }
+    decoded_data
+}
+
+fn polynomial_eval(encoded: &DMatrix<Complex<f64>>, xi: &Complex<f64>) -> Complex<f64> {
+    let mut sum: Complex<f64> = Complex::new(0.0, 0.0);
+    let N: usize = M/2;
+    for i in 0..N {
+        sum += encoded[(i)] * (xi.powf(i as f64));
+    }
+    sum
 }
