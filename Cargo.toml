@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 num = "0.4.0"
 nalgebra = "*"
+polynomen = "1.1.0"
+polynomial = "0.2.6"
