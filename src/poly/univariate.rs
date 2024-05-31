@@ -1,29 +1,12 @@
+use crate::poly::term::Term;
 use num::Num;
 use num::Zero;
 use std::fmt;
 use std::ops;
 
 #[derive(Clone, Debug)]
-pub struct Term<T> {
-    pub coefficient: T,
-    pub degree: usize,
-}
-
-#[derive(Clone, Debug)]
 pub struct Polynomial<T> {
-    pub terms: Vec<Term<T>>,
-}
-
-impl<T> Term<T>
-where
-    T: Num + Clone + Zero,
-{
-    fn new(coefficient: T, degree: usize) -> Self {
-        Term {
-            coefficient,
-            degree,
-        }
-    }
+    terms: Vec<Term<T>>,
 }
 
 impl<T> Polynomial<T>
@@ -54,56 +37,7 @@ where
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Term<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}x^{}", self.coefficient, self.degree)
-    }
-}
-
-impl<T> ops::Div<Term<T>> for Term<T>
-where
-    T: Num + Clone,
-{
-    type Output = Term<T>;
-
-    fn div(self, rhs: Term<T>) -> Term<T> {
-        Term::new(self.coefficient / rhs.coefficient, self.degree - rhs.degree)
-    }
-}
-
-impl<T> ops::Sub<Term<T>> for Term<T>
-where
-    T: Num + Clone,
-{
-    type Output = Term<T>;
-
-    fn sub(self, rhs: Term<T>) -> Term<T> {
-        Term::new(self.coefficient - rhs.coefficient, self.degree)
-    }
-}
-
-impl<T> ops::Mul<Term<T>> for Term<T>
-where
-    T: Num + Clone,
-{
-    type Output = Term<T>;
-
-    fn mul(self, rhs: Term<T>) -> Term<T> {
-        Term::new(self.coefficient * rhs.coefficient, self.degree + rhs.degree)
-    }
-}
-impl<T> ops::Add<Term<T>> for Term<T>
-where
-    T: Num + Clone,
-{
-    type Output = Term<T>;
-
-    fn add(self, rhs: Term<T>) -> Term<T> {
-        Term::new(self.coefficient + rhs.coefficient, self.degree)
-    }
-}
-
-impl<T: fmt::Display + Zero > fmt::Display for Polynomial<T> {
+impl<T: fmt::Display + Zero> fmt::Display for Polynomial<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut first = true;
         for term in &self.terms {
@@ -138,6 +72,54 @@ where
             .map(|(l, r)| (*l).clone() + (*r).clone())
             .collect();
         Polynomial { terms: terms }
+    }
+}
+
+impl<T> ops::Mul<Term<T>> for Polynomial<T>
+where
+    T: Num + Clone,
+{
+    type Output = Polynomial<T>;
+    fn mul(mut self, rhs: Term<T>) -> Polynomial<T> {
+        if rhs.degree > self.degree() {
+            for d in (self.degree())..rhs.degree {
+                self.terms.push(Term::new(T::zero(), d));
+            }
+        }
+        self.terms[rhs.degree] = self.terms[rhs.degree].clone() * rhs.clone();
+        Polynomial { terms: self.terms }
+    }
+}
+
+impl<T> ops::Sub<Term<T>> for Polynomial<T>
+where
+    T: Num + Clone,
+{
+    type Output = Polynomial<T>;
+    fn sub(mut self, rhs: Term<T>) -> Polynomial<T> {
+        if rhs.degree > self.degree() {
+            for d in (self.degree())..rhs.degree {
+                self.terms.push(Term::new(T::zero(), d));
+            }
+        }
+        self.terms[rhs.degree] = self.terms[rhs.degree].clone() - rhs.clone();
+        Polynomial { terms: self.terms }
+    }
+}
+
+impl<T> ops::Add<Term<T>> for Polynomial<T>
+where
+    T: Num + Clone,
+{
+    type Output = Polynomial<T>;
+    fn add(mut self, rhs: Term<T>) -> Polynomial<T> {
+        if rhs.degree > self.degree() {
+            for d in (self.degree())..rhs.degree {
+                self.terms.push(Term::new(T::zero(), d));
+            }
+        }
+        self.terms[rhs.degree] = self.terms[rhs.degree].clone() + rhs.clone();
+        Polynomial { terms: self.terms }
     }
 }
 
@@ -188,23 +170,17 @@ where
         assert!(self.degree() >= rhs.degree());
         let mut Q = Polynomial::new(vec![T::zero(); self.terms.len()]);
 
-        let mut N = self.clone();
-        let D = rhs.clone();
+        let mut R = self.clone();
+        let mut D = rhs.clone();
 
-        while N.degree() >= D.degree() {
-            let mut d_terms = D.clone().terms;
-            d_terms.rotate_right(N.degree() - D.degree());
-            let mut d = Polynomial::new(d_terms.into_iter().map(|t| t.coefficient).collect());
-            Q.terms[N.degree() - D.degree()] =
-                N.terms[N.degree()].clone() / d.terms[D.degree()].clone();
-            let mut factor = Polynomial::new(vec![T::zero(); rhs.terms.len()]);
-            factor.terms[N.degree() - D.degree()] = Q.terms[N.degree() - D.degree()].clone();
-            d = d.clone() * factor.clone();
-            N = N.clone() - d.clone();
-            println!("{}", N.clone());
-            break;
+        while R.degree() >= D.degree() && true {
+            // replace true with r != zero
+            let t: Term<T> = R.terms.last().expect("Vector cannot be empty").clone()
+                / D.terms.last().expect("Vector cannot be empty").clone();
+            Q = Q + t.clone();
+            R = R - (D.clone() * t.clone());
         }
 
-        (Q, N.clone())
+        (Q, R)
     }
 }
